@@ -14,7 +14,7 @@ class ApiGenerator:
 
     '''
     Sample
-    host: http://localhost:2000
+    host: localhost:2000
     dmname: Generalization
     '''
     def set_basic_path(self, host, dmname):
@@ -48,6 +48,7 @@ class ApiGenerator:
             'version': '1.0.0',
             'title': self.__dmname + ' API Reference'
 	    }
+        api['schemes'] = ['http', 'https']
         api['host'] = self.__host
         api['basePath'] = '/' + self.__dmname
         api['tags'] = []
@@ -59,16 +60,14 @@ class ApiGenerator:
 
     def __set_entity_apis(self, entity_name):
         # create data payload structure
-        properties = {}
-        self.__define_object('SignleData', properties) ####### TODO
-        self.__define_object('SingleId', properties)
-        self.__define_object('MultiData', properties)
-        self.__define_object('MultiId', properties)
-        self.__define_object('UpdateById', properties)
-        self.__define_object('UpdateByData', properties)
+        self.__define_object('SingleData', self.__gen_properties(entity_name, data_num=1)) 
+        self.__define_object('SingleId', self.__gen_properties(entity_name, id_num=1))
+        self.__define_object('MultiData', self.__gen_properties(entity_name, data_num=2))
+        self.__define_object('UpdateById', self.__gen_properties(entity_name, id_num=1, new_data=1))
+        self.__define_object('UpdateByData', self.__gen_properties(entity_name, old_data=1, new_data=1))
 
         params = []
-        self.__gen_parameter(params, 'Create with single data', 'SignleData')
+        self.__gen_parameter(params, 'Create with single data', 'SingleData')
         self.__add_entity_api(entity_name, 'create', 'post', params)
 
         params = []
@@ -76,22 +75,21 @@ class ApiGenerator:
         self.__add_entity_api(entity_name, 'createMany', 'post', params)
 
         params = []
-        self.__gen_parameter(params, 'Read by data', 'SignleData')
+        # self.__gen_parameter(params, 'Read by data', 'SingleData') # can't apply multiple request body
         self.__gen_parameter(params, 'Read by id', 'SingleId')
         self.__add_entity_api(entity_name, 'readOne', 'post', params)
 
         params = []
-        self.__gen_parameter(params, 'Read many by data', 'SignleData')
-        self.__gen_parameter(params, 'Read many by ids', 'SingleId')
-        self.__add_entity_api(entity_name, 'readMany', 'post', params)
+        self.__gen_parameter(params, 'Read all by data', 'SingleData')
+        self.__add_entity_api(entity_name, 'readAll', 'post', params)
 
         params = []
-        self.__gen_parameter(params, 'Detele by data', 'SignleData')
-        self.__gen_parameter(params, 'Delete by id', 'SingleId')
+        self.__gen_parameter(params, 'Detele by data', 'SingleData')
+        # self.__gen_parameter(params, 'Delete by id', 'SingleId')
         self.__add_entity_api(entity_name, 'delete', 'delete', params)
 
         params = []
-        self.__gen_parameter(params, 'Update data by data id', 'UpdateById')
+        # self.__gen_parameter(params, 'Update data by data id', 'UpdateById')
         self.__gen_parameter(params, 'Update data by old data', 'UpdateByData')
         self.__add_entity_api(entity_name, 'update', 'put', params)
     
@@ -114,21 +112,53 @@ class ApiGenerator:
             'parameters': params
         }
 
-    '''
-    generate sample payload
-    '''
-    def __gen_properties(self, entity_name, id=0, data=0):
-        properties = {
-            'collection': entity_name,
-            'key': self.__accessKey,
-            'username': self.__user
-        }
-        # smaple_id = ['5b2a10190d7dceabda2fe3bb', '5b2a10180d7dceabda2fe3ba', '5b15d6e854a3e5117c7c7429']
-        # sample_data = []
+    def __gen_properties(self, entity_name, id_num=0, data_num=0, old_data=0, new_data=0):
+        properties = {}
         if id == 1:
-            properties['_id'] = id
-        if data:
-            properties['data'] = data
+            properties['_id'] = {
+                'type': 'string',
+                'example': '5b2a10190d7dceabda2fe3bb'
+            }
+        sample_data = {
+            'name': 'test1'
+        }
+        if data_num > 1:
+            sample_list = []
+            for i in xrange(1, data_num + 1):
+                sample_list.append({'name': 'test' + str(i)})
+
+            properties['data'] = {
+                'type': 'string',
+                'example': str(sample_list).encode('string-escape')
+            }
+        elif data_num == 1:
+            properties['data'] = {
+                'type': 'string',
+                'example': str(sample_data).encode('string-escape')
+            }
+        if old_data == 1:
+            properties['oldData'] = {
+                'type': 'string',
+                'example': str(sample_data).encode('string-escape')
+            }
+        if new_data == 1:
+            properties['newData'] = {
+                'type': 'string',
+                'example': str(sample_data).encode('string-escape')
+            }
+        properties['collection'] = {
+            'type': 'string',
+            'example': entity_name
+        }
+        properties['username'] = {
+            'type': 'string',
+            'example': self.__user
+        }
+        properties['key'] = {
+            'type': 'string',
+            'example': self.__accessKey
+        }
+        return properties
 
     def __gen_parameter(self, params, description, object_name):
         param = {
@@ -153,8 +183,8 @@ class ApiGenerator:
 
 if __name__ == '__main__':
     gen = ApiGenerator()
-    gen.set_basic_path('http://localhost:2000', 'one_to_one')
-    gen.set_access_key('...')
+    gen.set_basic_path('localhost:2000', 'one_to_one')
+    gen.set_access_key('1234567890')
     gen.set_user_name('danny')
     gen.add_entity('class1')
     gen.add_entity('class2')
